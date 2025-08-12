@@ -20,10 +20,19 @@ import requests
 # ส่วนที่ 2: ตั้งค่าต่างๆ
 # ==============================================================================
 app = Flask(__name__)
+
+# ONLINE กรณีรันออนไลน์ผ่าน Render
 NEWS_API_KEY = os.environ.get('NEWS_API_KEY')
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
 TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
 TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID')
+
+# OFFLINE กรณีรันผ่านเครื่อง
+# NEWS_API_KEY = "91bba17953f340ffa7c7989b7c063ece"
+# GEMINI_API_KEY = "AIzaSyAQRVu2s7tZh694BueAvqsK459gNRr7am0"
+# TELEGRAM_BOT_TOKEN = "8463143627:AAEptZVclnBOc_5qtY5PvwGDT8b8zQH-T5s"
+# TELEGRAM_CHAT_ID = "-4974494043"
+
 
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel('gemini-1.5-pro-latest')
