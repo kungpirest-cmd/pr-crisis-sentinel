@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PR-Crisis Sentinel (Final Version)</title>
+    <!-- โหลดไลบรารี JavaScript ที่จำเป็น -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- ส่วนของ CSS สำหรับจัดสไตล์หน้าเว็บ -->
+    <style>
+      body {
+        font-family: "Sarabun", sans-serif;
+        background-color: #f0f2f5;
+        padding: 20px;
+        color: #444;
+        margin: 0;
+      }
+      .main-container {
+        max-width: 1200px;
+        margin: auto;
+      }
+      h1 {
+        text-align: center;
+        color: #1a5276;
+      }
+      h3 {
+        text-align: center;
+        color: #34495e;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+      .header {
+        text-align: center;
+        margin-bottom: 30px;
+      }
+      .nav-link {
+        color: #3498db;
+        text-decoration: none;
+        margin: 0 15px;
+        font-weight: bold;
+      }
+      .nav-link:hover {
+        text-decoration: underline;
+      }
+      .search-form {
+        text-align: center;
+        margin-bottom: 40px;
+      }
+      .search-form input {
+        font-size: 1em;
+        padding: 12px;
+        width: 300px;
+        border: 1px solid #ccc;
+        border-radius: 25px;
+      }
+      .search-form button {
+        font-size: 1em;
+        padding: 12px 25px;
+        background-color: #3498db;
+        color: white;
+        border: none;
+        border-radius: 25px;
+        cursor: pointer;
+        margin-left: 10px;
+        transition: background-color 0.3s;
+      }
+      .search-form button:hover {
+        background-color: #2980b9;
+      }
+      .results-header {
+        text-align: center;
+        font-size: 1.5em;
+        margin-bottom: 20px;
+        color: #2c3e50;
+      }
+      .charts-container {
+        display: flex;
+        justify-content: center;
+        gap: 30px;
+        flex-wrap: wrap;
+        margin-bottom: 40px;
+        align-items: flex-start;
+      }
+      .card {
+        background-color: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        padding: 20px;
+      }
+      .chart-card,
+      .keyword-card,
+      .trend-card {
+        width: 100%;
+        max-width: 360px;
+      }
+      .wordcloud-card {
+        width: 100%;
+        max-width: 1140px;
+        text-align: center;
+      }
+      .wordcloud-card img {
+        max-width: 100%;
+        height: auto;
+      }
+      .keyword-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: center;
+        margin-top: 15px;
+      }
+      .keyword-tag {
+        background-color: #e74c3c;
+        color: white;
+        padding: 5px 12px;
+        border-radius: 15px;
+        font-size: 0.9em;
+      }
+      .trend-card .trend-text {
+        font-size: 1.5em;
+        font-weight: bold;
+        text-align: center;
+        margin-top: 20px;
+      }
+      .trend-alert {
+        color: #c0392b;
+      }
+      .trend-good {
+        color: #27ae60;
+      }
+      .trend-normal {
+        color: #7f8c8d;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background-color: white;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        margin-top: 40px;
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      th,
+      td {
+        padding: 12px 15px;
+        border-bottom: 1px solid #eee;
+        text-align: left;
+      }
+      th {
+        background-color: #f8f9fa;
+      }
+      .sentiment-POSITIVE {
+        color: #27ae60;
+        font-weight: bold;
+      }
+      .sentiment-NEGATIVE {
+        color: #c0392b;
+        font-weight: bold;
+      }
+      .sentiment-NEUTRAL {
+        color: #7f8c8d;
+        font-weight: bold;
+      }
+      .tooltip {
+        position: relative;
+        display: inline-block;
+        cursor: pointer;
+      }
+      .tooltip .tooltip-text {
+        visibility: hidden;
+        width: 220px;
+        background-color: #555;
+        color: #fff;
+        text-align: center;
+        border-radius: 6px;
+        padding: 8px;
+        position: absolute;
+        z-index: 1;
+        bottom: 125%;
+        left: 50%;
+        margin-left: -110px;
+        opacity: 0;
+        transition: opacity 0.3s;
+        font-size: 0.8em;
+        font-weight: normal;
+      }
+      .tooltip:hover .tooltip-text {
+        visibility: visible;
+        opacity: 1;
+      }
+      .tooltip-icon {
+        font-size: 0.8em;
+        border: 1px solid #ccc;
+        border-radius: 50%;
+        width: 18px;
+        height: 18px;
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+      }
+      .table-container h3 {
+        display: block;
+      }
+      .table-summary {
+        text-align: center;
+        margin-bottom: 20px;
+        font-size: 1.1em;
+        color: #555;
+        padding: 10px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+      }
+      .table-summary span {
+        margin: 0 10px;
+      }
+      .summary-button-container {
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        flex-wrap: wrap;
+        margin: 30px 0;
+      }
+      .exec-summary-btn,
+      .root-cause-btn {
+        color: white;
+        border: none;
+        padding: 12px 25px;
+        border-radius: 25px;
+        font-size: 1.1em;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background-color 0.3s;
+      }
+      .exec-summary-btn {
+        background-color: #1abc9c;
+      }
+      .exec-summary-btn:hover {
+        background-color: #16a085;
+      }
+      .root-cause-btn {
+        background-color: #34495e;
+      }
+      .root-cause-btn:hover {
+        background-color: #2c3e50;
+      }
+      @media (max-width: 768px) {
+        .charts-container {
+          flex-direction: column;
+          align-items: center;
+        }
+        .chart-card,
+        .keyword-card,
+        .trend-card,
+        .wordcloud-card {
+          max-width: 90%;
+        }
+        .search-form {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 10px;
+        }
+        .search-form input {
+          width: 80%;
+        }
+        .search-form button {
+          margin-left: 0;
+        }
+      }
+      #loader-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(255, 255, 255, 0.8);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        z-index: 9999;
+      }
+      .loader {
+        border: 8px solid #f3f3f3;
+        border-top: 8px solid #3498db;
+        border-radius: 50%;
+        width: 60px;
+        height: 60px;
+        animation: spin 1.5s linear infinite;
+        margin-bottom: 20px;
+      }
+      #loader-overlay p {
+        font-size: 1.2em;
+        color: #2c3e50;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+      .pagination-container {
+        text-align: center;
+        margin-top: 30px;
+      }
+      .pagination-btn {
+        background-color: white;
+        border: 1px solid #ddd;
+        color: #3498db;
+        padding: 8px 16px;
+        text-decoration: none;
+        cursor: pointer;
+        margin: 0 4px;
+        border-radius: 4px;
+        transition: background-color 0.3s;
+      }
+      .pagination-btn:hover {
+        background-color: #3498db;
+        color: white;
+      }
+      .pagination-btn.active {
+        background-color: #3498db;
+        color: white;
+        font-weight: bold;
+      }
+      .pagination-btn.disabled {
+        color: #ccc;
+        cursor: not-allowed;
+        background-color: #f9f9f9;
+      }
+      .site-footer {
+        text-align: center;
+        margin-top: 50px;
+        padding-top: 20px;
+        border-top: 1px solid #ddd;
+        color: #7f8c8d;
+        font-size: 0.9em;
+      }
+      .ai-assistant-btn {
+        background-color: #e67e22;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 25px;
+        font-size: 1em;
+        font-weight: bold;
+        cursor: pointer;
+        margin-top: 15px;
+        transition: background-color 0.3s;
+      }
+      .ai-assistant-btn:hover {
+        background-color: #d35400;
+      }
+      .swal2-html-container {
+        text-align: left !important;
+        white-space: pre-wrap;
+      }
+
+      .search-form {
+        position: relative;
+        display: inline-block;
+      }
+      #mic-button {
+        position: absolute;
+        right: 130px; /* ปรับตำแหน่งให้อยู่ในช่อง input */
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        font-size: 1.5em;
+        cursor: pointer;
+        color: #7f8c8d;
+      }
+      #mic-button.recording {
+        color: #e74c3c; /* เปลี่ยนเป็นสีแดงเมื่อกำลังบันทึกเสียง */
+      }
+
+      /* ... โค้ด CSS เดิมทั้งหมด ... */
+      .search-form-container {
+        text-align: center;
+        margin-bottom: 40px;
+      }
+      .top-buttons-container {
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        flex-wrap: wrap;
+        margin-bottom: 40px;
+      }
+      .action-btn {
+        color: white;
+        border: none;
+        padding: 12px 25px;
+        border-radius: 25px;
+        font-size: 1.1em;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background-color 0.3s;
+      }
+      .exec-summary-btn {
+        background-color: #1abc9c;
+      }
+      .exec-summary-btn:hover {
+        background-color: #16a085;
+      }
+      .simulation-btn {
+        background-color: #f39c12;
+      } /* สีส้ม */
+      .simulation-btn:hover {
+        background-color: #e67e22;
+      }
+    </style>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="loader-overlay">
+      <div class="loader"></div>
+      <p>กำลังประมวลผล... กรุณารอสักครู่</p>
+    </div>
+
+    <div class="main-container">
+      <div class="header">
+        <h1>🛡️ PR-Crisis Sentinel</h1>
+        <nav>
+          <a href="{{ url_for('index') }}" class="nav-link">หน้าหลัก</a>
+          <a href="{{ url_for('about') }}" class="nav-link">เกี่ยวกับโครงการ</a>
+        </nav>
+      </div>
+
+      <!-- ===== START: ปรับ Layout ปุ่ม ===== -->
+      <div class="top-buttons-container">
+        {% if keyword is defined and results %}
+        <button id="simulation-button" class="action-btn simulation-btn">
+          🔮 จำลองสถานการณ์วิกฤต
+        </button>
+
+        <button id="exec-summary-button" class="action-btn exec-summary-btn">
+          🪄 สร้างบทสรุปสำหรับผู้บริหาร
+        </button>
+        {% if sentiment_summary.NEGATIVE > 0 %}
+        <button id="root-cause-button" class="root-cause-btn">
+          🔬 วิเคราะห์สาเหตุเชิงลึก
+        </button>
+        {% endif %} {% endif %}
+      </div>
+      <!-- ===== END: ปรับ Layout ปุ่ม ===== -->
+
+      <div class="search-form-container">
+        <form class="search-form" action="/analyze" method="post">
+          <input
+            type="text"
+            id="keyword-input"
+            name="keyword"
+            placeholder="พิมพ์ข้อความหรือพูดเสียง......"
+            required
+          />
+          <button type="button" id="mic-button" title="ค้นหาด้วยเสียง">
+            🎤
+          </button>
+          <button type="submit">วิเคราะห์</button>
+        </form>
+      </div>
+
+      {% if keyword is defined %} {% if results %}
+      <div class="results-header">
+        ผลการวิเคราะห์สำหรับ: <strong>{{ keyword }}</strong>
+      </div>
+      <div class="charts-container">
+        {% if wordcloud_image %}
+        <div class="wordcloud-card card">
+          <h3>
+            คำสำคัญในข่าวเชิงลบ
+            <div class="tooltip">
+              <span class="tooltip-icon">?</span
+              ><span class="tooltip-text"
+                >แสดงคำที่พบบ่อยที่สุดในหัวข้อข่าวเชิงลบ</span
+              >
+            </div>
+          </h3>
+          <img
+            src="{{ url_for('static', filename=wordcloud_image) }}"
+            alt="Word Cloud"
+          />
+        </div>
+        {% endif %}
+        <div class="chart-card card">
+          <h3>
+            สัดส่วนความรู้สึก
+            <div class="tooltip">
+              <span class="tooltip-icon">?</span
+              ><span class="tooltip-text">แสดงสัดส่วนของข่าวทั้งหมด</span>
+            </div>
+          </h3>
+          <canvas id="sentimentPieChart"></canvas>
+        </div>
+        {% if trend_message %}
+        <div class="trend-card card">
+          <h3>
+            📈 แนวโน้มข่าวเชิงลบ
+            <div class="tooltip">
+              <span class="tooltip-icon">?</span
+              ><span class="tooltip-text"
+                >เปรียบเทียบกับค่าเฉลี่ย 7 วันที่ผ่านมา</span
+              >
+            </div>
+          </h3>
+          <p class="trend-text trend-{{ trend_status }}">{{ trend_message }}</p>
+          {% if trend_status == 'alert' %}
+          <button id="ai-assistant-button" class="ai-assistant-btn">
+            🤖 ขอคำแนะนำจาก AI
+          </button>
+          {% endif %}
+        </div>
+        {% endif %} {% if top_keywords %}
+        <div class="keyword-card card">
+          <h3>
+            ประเด็นร้อนที่พบ
+            <div class="tooltip">
+              <span class="tooltip-icon">?</span
+              ><span class="tooltip-text">สกัด 5 คำสำคัญจากข่าวเชิงลบ</span>
+            </div>
+          </h3>
+          <div class="keyword-tags">
+            {% for keyword in top_keywords %}<span class="keyword-tag"
+              >{{ keyword }}</span
+            >{% endfor %}
+          </div>
+        </div>
+        {% endif %}
+      </div>
+      <div class="table-container">
+        <h3>รายการหัวข้อข่าว</h3>
+        <div class="table-summary">
+          <span><strong>ข่าวทั้งหมด:</strong> {{ results|length }} รายการ</span>
+          |
+          <span class="sentiment-POSITIVE"
+            ><strong>เชิงบวก:</strong> {{ sentiment_summary.POSITIVE }}</span
+          >
+          |
+          <span class="sentiment-NEGATIVE"
+            ><strong>เชิงลบ:</strong> {{ sentiment_summary.NEGATIVE }}</span
+          >
+          |
+          <span class="sentiment-NEUTRAL"
+            ><strong>เป็นกลาง:</strong> {{ sentiment_summary.NEUTRAL }}</span
+          >
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>หัวข้อข่าว (คลิกเพื่ออ่าน)</th>
+              <th style="width: 150px">ผลวิเคราะห์</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for result in results %}
+            <tr>
+              <td>
+                <a
+                  href="{{ result.url }}"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style="text-decoration: none; color: inherit"
+                  >{{ result.title }}</a
+                >
+              </td>
+              <td class="sentiment-{{ result.sentiment }}">
+                {{ result.sentiment_thai }}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <div id="pagination-wrapper" class="pagination-container"></div>
+      </div>
+      {% endif %} {% endif %}
+    </div>
+
+    <footer class="site-footer">
+      <p>
+        © 2025 แผนกวิชาคอมพิวเตอร์ธุรกิจ วิทยาลัยเทคนิครัตนบุรี
+        สำนักงานอาชีวศึกษาสุรินทร์<br />
+        สำนักงานคณะกรรมการการอาชีวศึกษา กระทรวงศึกษาธิการ
+      </p>
+    </footer>
+
+    <script>
+                const searchForm = document.querySelector('.search-form');
+                const loaderOverlay = document.getElementById('loader-overlay');
+
+          // ===== START: โค้ดสำหรับ Voice Input =====
+              const micButton = document.getElementById('mic-button');
+              const keywordInput = document.getElementById('keyword-input');
+
+              // ตรวจสอบว่าเบราว์เซอร์รองรับ Web Speech API หรือไม่
+              if ('webkitSpeechRecognition' in window) {
+                  const recognition = new webkitSpeechRecognition();
+                  recognition.continuous = false; // หยุดฟังเมื่อพูดจบ
+                  recognition.lang = 'th-TH';     // ตั้งค่าเป็นภาษาไทย
+                  recognition.interimResults = false;
+                  recognition.maxAlternatives = 1;
+
+                  micButton.addEventListener('click', () => {
+                      recognition.start();
+                      micButton.classList.add('recording');
+                      keywordInput.placeholder = "กำลังรับฟังพิมพ์ด้วยเสียง...";
+                      // ===== START: เพิ่มการแจ้งเตือน Toast =====
+      Swal.fire({
+          toast: true,
+          position: 'top',
+          text: 'กำลังพิมพ์ด้วยเสียง...',
+          showConfirmButton: false,
+          timer: 3000, // ให้แจ้งเตือนหายไปเองใน 3 วินาที
+          timerProgressBar: true,
+          didOpen: (toast) => {
+              toast.addEventListener('mouseenter', Swal.stopTimer)
+              toast.addEventListener('mouseleave', Swal.resumeTimer)
+          }
+      });
+      // ===== END: เพิ่มการแจ้งเตือน Toast =====
+                  });
+
+
+
+                  // เมื่อ AI แปลงเสียงเป็นข้อความสำเร็จ
+                  recognition.onresult = function(event) {
+                      const transcript = event.results[0][0].transcript;
+                      keywordInput.value = transcript;
+                  };
+
+                  // เมื่อเกิดข้อผิดพลาด
+                  recognition.onerror = function(event) {
+                      console.error("Speech recognition error", event.error);
+                      keywordInput.placeholder = "เกิดข้อผิดพลาด ลองอีกครั้ง";
+                  };
+
+                  // เมื่อการฟังเสียงสิ้นสุดลง
+                  recognition.onend = function() {
+                      micButton.classList.remove('recording');
+                      keywordInput.placeholder = "พิมพ์ข้อความหรือพูดเสียง......";
+                  };
+
+              } else {
+                  // ถ้าเบราว์เซอร์ไม่รองรับ ให้ซ่อนปุ่มไมโครโฟนไปเลย
+                  console.log("Speech Recognition Not Available");
+                  micButton.style.display = 'none';
+              }
+              // ===== END: โค้ดสำหรับ Voice Input =====
+
+                searchForm.addEventListener('submit', function() {
+                    const keywordInput = document.querySelector('input[name="keyword"]');
+                    if (keywordInput.value.trim() !== '') {
+                        loaderOverlay.style.display = 'flex';
+                    }
+                });
+
+                {% if keyword is defined %}
+                    {% if not results %}
+                        Swal.fire({
+                            icon: 'info',
+                            title: 'ไม่พบข้อมูล',
+                            text: 'ไม่พบข่าวที่เกี่ยวกับ "{{ keyword }}" ในระบบ หรือลองใช้คำค้นหาอื่น',
+                            confirmButtonText: 'ตกลง'
+                        });
+                    {% else %}
+                        const pieLabels = JSON.parse('{{ labels | safe }}');
+                        const pieValues = JSON.parse('{{ values | safe }}');
+                        const pieCtx = document.getElementById('sentimentPieChart');
+                        if (pieCtx) {
+                            new Chart(pieCtx.getContext('2d'), {
+                                type: 'doughnut',
+                                data: {
+                                    labels: pieLabels,
+                                    datasets: [{
+                                        data: pieValues,
+                                        backgroundColor: pieLabels.map(label => {
+                                            if (label === 'ข่าวเชิงบวก') return 'rgba(75, 192, 192, 0.7)';
+                                            if (label === 'ข่าวเชิงลบ') return 'rgba(255, 99, 132, 0.7)';
+                                            return 'rgba(201, 203, 207, 0.7)';
+                                        })
+                                    }]
+                                }
+                            });
+                        }
+
+                        const tableRows = document.querySelectorAll('.table-container tbody tr');
+                        const rowsPerPage = 10;
+                        let currentPage = 1;
+
+                        function setupPagination() {
+                            const pageCount = Math.ceil(tableRows.length / rowsPerPage);
+                            const paginationWrapper = document.getElementById('pagination-wrapper');
+                            if (!paginationWrapper) return;
+                            paginationWrapper.innerHTML = '';
+                            let prevButton = document.createElement('button');
+                            prevButton.classList.add('pagination-btn');
+                            prevButton.innerText = 'ก่อนหน้า';
+                            prevButton.addEventListener('click', () => { if (currentPage > 1) { currentPage--; displayPage(currentPage); } });
+                            paginationWrapper.appendChild(prevButton);
+                            for (let i = 1; i <= pageCount; i++) {
+                                let btn = document.createElement('button');
+                                btn.classList.add('pagination-btn');
+                                btn.innerText = i;
+                                btn.addEventListener('click', () => { currentPage = i; displayPage(currentPage); });
+                                paginationWrapper.appendChild(btn);
+                            }
+                            let nextButton = document.createElement('button');
+                            nextButton.classList.add('pagination-btn');
+                            nextButton.innerText = 'ถัดไป';
+                            nextButton.addEventListener('click', () => { if (currentPage < pageCount) { currentPage++; displayPage(currentPage); } });
+                            paginationWrapper.appendChild(nextButton);
+                        }
+
+                        function displayPage(page) {
+                            tableRows.forEach(row => row.style.display = 'none');
+                            const startIndex = (page - 1) * rowsPerPage;
+                            const endIndex = startIndex + rowsPerPage;
+                            for (let i = startIndex; i < endIndex && i < tableRows.length; i++) { tableRows[i].style.display = ''; }
+                            updateActiveButton();
+                        }
+
+                        function updateActiveButton() {
+                            const buttons = document.querySelectorAll('.pagination-btn');
+                            const pageCount = Math.ceil(tableRows.length / rowsPerPage);
+                            buttons.forEach(button => {
+                                button.classList.remove('active');
+                                if (parseInt(button.innerText) === currentPage) { button.classList.add('active'); }
+                            });
+                            buttons[0].classList.toggle('disabled', currentPage === 1);
+                            buttons[buttons.length - 1].classList.toggle('disabled', currentPage === pageCount);
+                        }
+
+                        if (tableRows.length > rowsPerPage) {
+                            setupPagination();
+                            displayPage(currentPage);
+                        } else {
+                            tableRows.forEach(row => row.style.display = '');
+                        }
+
+                        const aiButton = document.getElementById('ai-assistant-button');
+                        if (aiButton) {
+                            aiButton.addEventListener('click', function() {
+                                Swal.fire({
+                                    title: 'AI กำลังคิด...',
+                                    text: 'กำลังร่างข้อความชี้แจงเบื้องต้นให้คุณ',
+                                    allowOutsideClick: false,
+                                    didOpen: () => { Swal.showLoading(); }
+                                });
+
+                                const keyword = '{{ keyword }}';
+                                const top_keywords = {{ top_keywords|tojson|safe }};
+                                const negative_headlines = {{ negative_headlines_for_js|tojson|safe }};
+
+                                fetch('/get_pr_suggestion', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        keyword: keyword,
+                                        top_keywords: top_keywords,
+                                        negative_headlines: negative_headlines
+                                    })
+                                })
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.suggestion) {
+                                        Swal.fire({
+                                            icon: 'success',
+                                            title: 'ร่างข้อความชี้แจงเบื้องต้น',
+                                            html: `<pre style="font-family: 'Sarabun', sans-serif; font-size: 1em; white-space: pre-wrap; text-align: left;">${data.suggestion}</pre>`,
+                                            confirmButtonText: 'คัดลอก'
+                                        }).then((result) => {
+                                            if (result.isConfirmed) {
+                                                try {
+                                                    navigator.clipboard.writeText(data.suggestion).then(() => {
+                                                        Swal.fire('คัดลอกแล้ว!', '', 'success');
+                                                    });
+                                                } catch (err) {
+                                                    const textArea = document.createElement("textarea");
+                                                    textArea.value = data.suggestion;
+                                                    document.body.appendChild(textArea);
+                                                    textArea.focus();
+                                                    textArea.select();
+                                                    try {
+                                                        document.execCommand('copy');
+                                                        Swal.fire('คัดลอกแล้ว!', '', 'success');
+                                                    } catch (err) {
+                                                        Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถคัดลอกข้อความได้', 'error');
+                                                    }
+                                                    document.body.removeChild(textArea);
+                                                }
+                                            }
+                                        });
+                                    } else {
+                                        Swal.fire('เกิดข้อผิดพลาด', data.error || 'ไม่สามารถรับคำแนะนำได้', 'error');
+                                    }
+                                })
+                                .catch(error => {
+                                    Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้', 'error');
+                                });
+                            });
+                        }
+
+                        const summaryButton = document.getElementById('exec-summary-button');
+                        if (summaryButton) {
+                            summaryButton.addEventListener('click', function() {
+                                Swal.fire({
+                                    title: 'AI กำลังสังเคราะห์ข้อมูล...',
+                                    text: 'กำลังเขียนบทสรุปสำหรับผู้บริหาร',
+                                    allowOutsideClick: false,
+                                    didOpen: () => { Swal.showLoading(); }
+                                });
+                                const keyword = '{{ keyword }}';
+                                const sentiment_summary = JSON.parse('{{ sentiment_summary|tojson|safe }}');
+                                const top_keywords = {{ top_keywords|tojson|safe }};
+                                const trend_message = '{{ trend_message }}';
+                                fetch('/get_executive_summary', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        keyword: keyword,
+                                        sentiment_summary: sentiment_summary,
+                                        top_keywords: top_keywords,
+                                        trend_message: trend_message
+                                    })
+                                })
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.summary) {
+                                        Swal.fire({
+                                            icon: 'success',
+                                            title: 'บทสรุปสำหรับผู้บริหาร',
+                                            html: `<p style="text-align: justify; line-height: 1.8;">${data.summary}</p>`,
+                                            showDenyButton: true,
+                                            confirmButtonText: 'ตกลง',
+                                            denyButtonText: `📲 ส่งเข้า Telegram`,
+                                        }).then((result) => {
+                                            if (result.isDenied) {
+                                                sendSummaryToTelegram(keyword, data.summary);
+                                            }
+                                        });
+                                    } else {
+                                        Swal.fire('เกิดข้อผิดพลาด', data.error || 'ไม่สามารถสร้างบทสรุปได้', 'error');
+                                    }
+                                })
+                                .catch(error => {
+                                    Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้', 'error');
+                                });
+                            });
+                        }
+
+                        function sendSummaryToTelegram(keyword, summary) {
+                            Swal.fire({
+                                title: 'กำลังส่ง...',
+                                allowOutsideClick: false,
+                                didOpen: () => { Swal.showLoading(); }
+                            });
+                            fetch('/send_summary_telegram', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ keyword: keyword, summary: summary })
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    Swal.fire('ส่งสำเร็จ!', 'บทสรุปถูกส่งเข้า Telegram ของคุณแล้ว', 'success');
+                                } else {
+                                    Swal.fire('เกิดข้อผิดพลาด', data.message || 'ไม่สามารถส่งข้อมูลได้', 'error');
+                                }
+                            });
+                        }
+
+                        const rootCauseButton = document.getElementById('root-cause-button');
+                        if (rootCauseButton) {
+                            rootCauseButton.addEventListener('click', function() {
+                                Swal.fire({
+                                    title: 'AI กำลังวินิจฉัย...',
+                                    text: 'กำลังวิเคราะห์สาเหตุรากเหง้าของปัญหา',
+                                    allowOutsideClick: false,
+                                    didOpen: () => { Swal.showLoading(); }
+                                });
+                                const negative_headlines = {{ negative_headlines_for_js|tojson|safe }};
+                                fetch('/get_root_cause', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ negative_headlines: negative_headlines })
+                                })
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.category && data.reason) {
+                                        Swal.fire({
+                                            icon: 'info',
+                                            title: 'ผลการวิเคราะห์สาเหตุโดย AI',
+                                            html: `
+                                                <div style="text-align: left; padding: 0 20px;">
+                                                    <h3 style="color:#2980b9; text-align:center;">${data.category}</h3>
+                                                    <p style="text-align: justify;">${data.reason}</p>
+                                                </div>
+                                            `,
+                                            confirmButtonText: 'ตกลง'
+                                        });
+                                    } else {
+                                        Swal.fire('เกิดข้อผิดพลาด', data.error || 'ไม่สามารถวิเคราะห์สาเหตุได้', 'error');
+                                    }
+                                })
+                                .catch(error => {
+                                    Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้', 'error');
+                                });
+                            });
+                        }
+                    {% endif %}
+                {% endif %}
+
+            // ===== START: โค้ดสำหรับห้องจำลองสถานการณ์ =====
+        const simulationButton = document.getElementById('simulation-button');
+        if (simulationButton) {
+            simulationButton.addEventListener('click', async function() {
+                const { value: headline } = await Swal.fire({
+                    title: 'จำลองสถานการณ์วิกฤต',
+                    input: 'text',
+                    inputLabel: 'ป้อนหัวข้อข่าวเชิงลบสมมติที่คุณกังวล',
+                    inputPlaceholder: 'เช่น พบสารปนเปื้อนในสินค้าล็อตใหม่...',
+                    showCancelButton: true,
+                    confirmButtonText: 'วิเคราะห์ผลกระทบ',
+                    cancelButtonText: 'ยกเลิก'
+                });
+
+                if (headline) {
+                    Swal.fire({
+                        title: 'AI กำลังคาดการณ์...',
+                        text: 'กำลังจำลองผลกระทบจากสถานการณ์',
+                        allowOutsideClick: false,
+                        didOpen: () => { Swal.showLoading(); }
+                    });
+
+                    fetch('/simulate_crisis', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ headline: headline })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.key_concerns && data.viral_score && data.first_action) {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'ผลการจำลองสถานการณ์',
+                                html: `
+                                    <div style="text-align: left; padding: 0 20px;">
+                                        <h3 style="color:#2980b9;">ประเด็นที่น่ากังวลที่สุด:</h3>
+                                        <ul>${data.key_concerns.map(item => `<li>${item}</li>`).join('')}</ul>
+                                        <h3 style="color:#2980b9;">ระดับความรุนแรง (1-10):</h3>
+                                        <p style="font-size: 1.5em; font-weight: bold; color: #c0392b;">${data.viral_score}</p>
+                                        <h3 style="color:#2980b9;">สิ่งที่ควรทำใน 1 ชั่วโมงแรก:</h3>
+                                        <p>${data.first_action}</p>
+                                    </div>
+                                `,
+                                confirmButtonText: 'ตกลง'
+                            });
+                        } else {
+                            Swal.fire('เกิดข้อผิดพลาด', data.error || 'ไม่สามารถจำลองสถานการณ์ได้', 'error');
+                        }
+                    })
+                    .catch(error => {
+                        Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้', 'error');
+                    });
+                }
+            });
+        }
+        // ===== END: โค้ดสำหรับห้องจำลองสถานการณ์ =====
+    </script>
+  </body>
+</html>
