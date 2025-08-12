@@ -22,7 +22,6 @@ import requests
 app = Flask(__name__)
 NEWS_API_KEY = os.environ.get('NEWS_API_KEY')
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
-
 TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
 TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID')
 
