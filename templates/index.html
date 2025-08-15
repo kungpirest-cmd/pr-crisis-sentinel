@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PR-Crisis Sentinel (Final Version)</title>
+    <title>ระบบ "เจาะข่าว" อัจฉริยะ (PR-Crisis Sentinel)</title>
     <!-- โหลดไลบรารี JavaScript ที่จำเป็น -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -36,6 +36,11 @@
       .header {
         text-align: center;
         margin-bottom: 30px;
+      }
+      .header .logo {
+        width: 120px;
+        height: auto;
+        margin-bottom: 10px;
       }
       .nav-link {
         color: #3498db;
@@ -429,7 +434,16 @@
 
     <div class="main-container">
       <div class="header">
-        <h1>🛡️ PR-Crisis Sentinel</h1>
+        <img
+          src="https://img2.pic.in.th/pic/d7148bd48bd930bf925897e1884e2b82.png"
+          alt="Project Logo"
+          class="logo"
+        />
+        <h1>
+          🛡️ ระบบ "เจาะข่าว" อัจฉริยะ 🛡️<br /><small
+            >(PR-Crisis Sentinel)</small
+          >
+        </h1>
         <nav>
           <a href="{{ url_for('index') }}" class="nav-link">หน้าหลัก</a>
           <a href="{{ url_for('about') }}" class="nav-link">เกี่ยวกับโครงการ</a>

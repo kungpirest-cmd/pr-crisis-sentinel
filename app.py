@@ -34,13 +34,17 @@ TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID')
 # TELEGRAM_CHAT_ID = "-4974494043"
 
 
+
+
+
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel('gemini-1.5-pro-latest')
 
 # ===== START: เพิ่มหน่วยความจำสำหรับเก็บสถานะล่าสุด =====
 latest_analysis_status = {
     "keyword": None,
-    "status": "normal" # ค่าเริ่มต้นคือ "ปกติ"
+    "status": "normal",
+    "timestamp": 0 # เพิ่มนาฬิกาจับเวลา
 }
 # =======================================================
 
@@ -106,7 +110,11 @@ def apply_sentiment_rules(initial_label, text):
 
 def create_wordcloud(text):
     if not text.strip(): return None
-    font_path = 'fonts/Sarabun-Regular.ttf'
+    # กรณีออนไลน์
+     font_path = 'fonts/Sarabun-Regular.ttf'
+     # กรณีออฟไลน์
+    # font_path = 'C:/Windows/Fonts/tahoma.ttf' # กลับมาใช้ Path เดิมที่แน่นอนกว่า
+
     try:
         words = word_tokenize(text, engine='newmm')
         text_for_cloud = " ".join(words)
@@ -176,6 +184,14 @@ def about():
 @app.route('/analyze', methods=['POST'])
 def analyze():
     keyword = request.form.get('keyword', '').strip()
+
+    # ===== START: อัปเดต keyword ทันที =====
+    # เพื่อให้ ESP32 เห็นคำค้นหาล่าสุดเสมอ แม้ว่าจะไม่เจอข่าวก็ตาม
+    latest_analysis_status["keyword"] = keyword
+    latest_analysis_status["timestamp"] = int(time.time()) # บันทึกเวลาปัจจุบัน
+    print(f"Received search for '{keyword}', updating global keyword.")
+    # ======================================
+    
     articles = get_news_from_api(keyword, NEWS_API_KEY)
     
     results_data, labels, values = [], [], []
@@ -184,7 +200,12 @@ def analyze():
     sentiment_summary = {'POSITIVE': 0, 'NEGATIVE': 0, 'NEUTRAL': 0}
     negative_headlines_for_js = []
 
-    if articles:
+    if not articles:
+        # ถ้าไม่เจอข่าว ให้รีเซ็ต status เป็น normal
+        latest_analysis_status["status"] = "normal"
+        latest_analysis_status["timestamp"] = int(time.time()) # บันทึกเวลาปัจจุบัน
+        print("No articles found. Setting status to normal.")
+    else:
         try:
             analysis_results = analyze_sentiment_with_gemini(articles, model)
             print("Analysis successful using Gemini AI.")
@@ -227,19 +248,21 @@ def analyze():
             else: trend_message, trend_status = f"ใกล้เคียงกับค่าเฉลี่ย 7 วันล่าสุด ({historical_avg:.1f}%)", "normal"
         else:
             trend_message, trend_status = "ยังไม่มีข้อมูลย้อนหลังเพียงพอ", "normal"
-            # ===== START: อัปเดตสถานะล่าสุดในหน่วยความจำ =====
-            latest_analysis_status["keyword"] = keyword
-            latest_analysis_status["status"] = trend_status
-            print(f"Updated global status: {latest_analysis_status}")
-            # ===============================================
+        
+        is_volume_crisis = sentiment_summary['NEGATIVE'] > sentiment_summary['POSITIVE']
+        if trend_status != 'alert' and is_volume_crisis:
+            print("Volume crisis detected, overriding status to alert.")
+            trend_status = 'alert'
+            trend_message = f"สัดส่วนข่าวเชิงลบ ({sentiment_summary['NEGATIVE']}) มากกว่าข่าวเชิงบวก ({sentiment_summary['POSITIVE']})"
+
+        # ===== START: อัปเดต status หลังวิเคราะห์เสร็จ =====
+        latest_analysis_status["status"] = trend_status
+        print(f"Analysis complete. Final status: {latest_analysis_status}")
+        # ===============================================
 
         if negative_headlines_text:
             wordcloud_image = create_wordcloud(negative_headlines_text)
             top_keywords = extract_keywords(negative_headlines_text)
-        
-        if trend_status == 'alert':
-            notification_message = f"🚨 *Crisis Alert: {keyword}* 🚨\n*สถานการณ์:* {trend_message}\n*ประเด็นร้อน:* {', '.join(top_keywords)}"
-            send_telegram_notification(notification_message)
         
         labels = [label_map_thai.get(label) for label in sentiment_summary.keys()]
         values = list(sentiment_summary.values())
@@ -251,7 +274,7 @@ def analyze():
                            trend_message=trend_message, trend_status=trend_status,
                            sentiment_summary=sentiment_summary,
                            negative_headlines_for_js=negative_headlines_for_js)
-                           
+                        
 
 @app.route('/get_pr_suggestion', methods=['POST'])
 def get_pr_suggestion():
@@ -396,15 +419,24 @@ def get_root_cause():
         return jsonify({'error': 'Failed to analyze root cause'}), 500
 # ===== END: เพิ่มฟังก์ชันที่หายไปกลับเข้ามา =====
 
-# ===== START: Route ใหม่สำหรับให้ ESP32 เรียกใช้ =====
+# ===== START: Route ใหม่สำหรับให้ ESP8266 เรียกใช้ =====
 @app.route('/api/crisis_status')
 def crisis_status():
     """
-    API Endpoint ที่จะคืนค่าสถานะล่าสุดเป็น JSON
-    เพื่อให้ ESP32 หรืออุปกรณ์อื่นๆ เข้ามาตรวจสอบได้
+    API Endpoint ที่จะคืนค่าสถานะล่าสุด และรีเซ็ตสถานะ alert ที่หมดอายุแล้ว
     """
+    ALERT_DURATION_SECONDS = 90 # กำหนดให้ Alert อยู่ได้นาน 1.30 นาที
+
+    # ตรวจสอบว่าสถานะปัจจุบันคือ 'alert' และหมดเวลาแล้วหรือยัง
+    if latest_analysis_status["status"] == "alert":
+        current_time = int(time.time())
+        alert_time = latest_analysis_status.get("timestamp", 0)
+
+        if (current_time - alert_time) > ALERT_DURATION_SECONDS:
+            print("Alert has expired. Resetting status to normal.")
+            latest_analysis_status["status"] = "normal" # รีเซ็ตสถานะกลับเป็นปกติ
+
     return jsonify(latest_analysis_status)
-# ===== END: Route ใหม่ =====
 
 
 # ===== START: Route ใหม่สำหรับห้องจำลองสถานการณ์ =====
@@ -446,5 +478,9 @@ def simulate_crisis():
 # ส่วนที่ 5: สั่งให้แอปพลิเคชันทำงาน
 # ==============================================================================
 if __name__ == '__main__':
+    
+    # กรณีออนไลน์
     app.run(debug=True, host='0.0.0.0')
+
+    # กรณีออฟไลน์
     # app.run(debug=True)
