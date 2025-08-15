@@ -34,9 +34,6 @@ TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID')
 # TELEGRAM_CHAT_ID = "-4974494043"
 
 
-
-
-
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel('gemini-1.5-pro-latest')
 
@@ -111,7 +108,7 @@ def apply_sentiment_rules(initial_label, text):
 def create_wordcloud(text):
     if not text.strip(): return None
     # กรณีออนไลน์
-     font_path = 'fonts/Sarabun-Regular.ttf'
+    font_path = 'fonts/Sarabun-Regular.ttf'
      # กรณีออฟไลน์
     # font_path = 'C:/Windows/Fonts/tahoma.ttf' # กลับมาใช้ Path เดิมที่แน่นอนกว่า
 
