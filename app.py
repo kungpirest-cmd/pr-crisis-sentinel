@@ -185,7 +185,7 @@ def analyze():
     # ===== START: อัปเดต keyword ทันที =====
     # เพื่อให้ ESP32 เห็นคำค้นหาล่าสุดเสมอ แม้ว่าจะไม่เจอข่าวก็ตาม
     latest_analysis_status["keyword"] = keyword
-    latest_analysis_status["timestamp"] = int(time.time()) # บันทึกเวลาปัจจุบัน
+    # latest_analysis_status["timestamp"] = int(time.time()) # บันทึกเวลาปัจจุบัน
     print(f"Received search for '{keyword}', updating global keyword.")
     # ======================================
     
@@ -254,12 +254,17 @@ def analyze():
 
         # ===== START: อัปเดต status หลังวิเคราะห์เสร็จ =====
         latest_analysis_status["status"] = trend_status
+        latest_analysis_status["timestamp"] = int(time.time())
         print(f"Analysis complete. Final status: {latest_analysis_status}")
         # ===============================================
 
         if negative_headlines_text:
             wordcloud_image = create_wordcloud(negative_headlines_text)
             top_keywords = extract_keywords(negative_headlines_text)
+        
+        if trend_status == 'alert':
+            notification_message = f"Crisis Alert: {keyword}\nสถานการณ์: {trend_message}\nประเด็นร้อน: {', '.join(top_keywords)}"
+            send_telegram_notification(notification_message)
         
         labels = [label_map_thai.get(label) for label in sentiment_summary.keys()]
         values = list(sentiment_summary.values())
