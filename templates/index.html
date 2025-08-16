@@ -10,11 +10,22 @@
 
     <!-- ส่วนของ CSS สำหรับจัดสไตล์หน้าเว็บ -->
     <style>
+      :root {
+        --primary-color: #3498db;
+        --secondary-color: #2c3e50;
+        --background-color: #ecf0f1;
+        --card-bg-color: #ffffff;
+        --text-color: #34495e;
+        --header-color: #2c3e50;
+        --danger-color: #e74c3c;
+        --success-color: #2ecc71;
+        --warning-color: #f39c12;
+      }
       body {
         font-family: "Sarabun", sans-serif;
-        background-color: #f0f2f5;
+        background: linear-gradient(135deg, #eaf2f8, #e8f6f3);
         padding: 20px;
-        color: #444;
+        color: var(--text-color);
         margin: 0;
       }
       .main-container {
@@ -23,11 +34,16 @@
       }
       h1 {
         text-align: center;
-        color: #1a5276;
+        color: var(--header-color);
+        line-height: 1.4;
+      }
+      h1 small {
+        font-size: 0.6em;
+        color: #566573;
       }
       h3 {
         text-align: center;
-        color: #34495e;
+        color: var(--header-color);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -38,49 +54,76 @@
         margin-bottom: 30px;
       }
       .header .logo {
-        width: 120px;
+        width: 100px;
         height: auto;
-        margin-bottom: 10px;
+        margin-bottom: 15px;
       }
       .nav-link {
-        color: #3498db;
+        color: var(--primary-color);
         text-decoration: none;
         margin: 0 15px;
         font-weight: bold;
+        transition: color 0.3s;
       }
       .nav-link:hover {
-        text-decoration: underline;
+        color: var(--secondary-color);
       }
-      .search-form {
+      .search-form-container {
         text-align: center;
         margin-bottom: 40px;
       }
+      .search-form {
+        position: relative;
+        display: inline-block;
+      }
       .search-form input {
         font-size: 1em;
-        padding: 12px;
-        width: 300px;
-        border: 1px solid #ccc;
-        border-radius: 25px;
+        padding: 15px 25px;
+        width: 350px;
+        border: 1px solid #dfe6e9;
+        border-radius: 30px;
+        padding-right: 60px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
       }
-      .search-form button {
+      .search-form button[type="submit"] {
         font-size: 1em;
         padding: 12px 25px;
-        background-color: #3498db;
+        background-color: var(--primary-color);
         color: white;
         border: none;
         border-radius: 25px;
         cursor: pointer;
         margin-left: 10px;
         transition: background-color 0.3s;
+        box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
       }
-      .search-form button:hover {
+      .search-form button[type="submit"]:hover {
         background-color: #2980b9;
+      }
+      #mic-button {
+        position: absolute;
+        right: 135px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        font-size: 1.5em;
+        cursor: pointer;
+        color: #b2bec3;
+        padding: 0 10px;
+        transition: color 0.3s;
+      }
+      #mic-button:hover {
+        color: var(--primary-color);
+      }
+      #mic-button.recording {
+        color: var(--danger-color);
       }
       .results-header {
         text-align: center;
-        font-size: 1.5em;
+        font-size: 1.8em;
         margin-bottom: 20px;
-        color: #2c3e50;
+        color: var(--header-color);
       }
       .charts-container {
         display: flex;
@@ -91,10 +134,16 @@
         align-items: flex-start;
       }
       .card {
-        background-color: white;
-        border-radius: 12px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-        padding: 20px;
+        background-color: var(--card-bg-color);
+        border-radius: 16px;
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        padding: 25px;
+        border-top: 4px solid var(--primary-color);
+        transition: transform 0.3s, box-shadow 0.3s;
+      }
+      .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
       }
       .chart-card,
       .keyword-card,
@@ -105,11 +154,13 @@
       .wordcloud-card {
         width: 100%;
         max-width: 1140px;
-        text-align: center;
+        border-top-color: var(--danger-color);
       }
       .wordcloud-card img {
         max-width: 100%;
         height: auto;
+        display: block;
+        margin: 20px auto 0;
       }
       .keyword-tags {
         display: flex;
@@ -119,7 +170,7 @@
         margin-top: 15px;
       }
       .keyword-tag {
-        background-color: #e74c3c;
+        background-color: var(--danger-color);
         color: white;
         padding: 5px 12px;
         border-radius: 15px;
@@ -132,38 +183,45 @@
         margin-top: 20px;
       }
       .trend-alert {
-        color: #c0392b;
+        color: var(--danger-color);
       }
       .trend-good {
-        color: #27ae60;
+        color: var(--success-color);
       }
       .trend-normal {
-        color: #7f8c8d;
+        color: var(--text-color);
       }
       table {
         width: 100%;
         border-collapse: collapse;
-        background-color: white;
+        background-color: var(--card-bg-color);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-        margin-top: 40px;
         border-radius: 12px;
         overflow: hidden;
       }
       th,
       td {
-        padding: 12px 15px;
-        border-bottom: 1px solid #eee;
+        padding: 15px;
+        border-bottom: 1px solid #ecf0f1;
         text-align: left;
       }
       th {
         background-color: #f8f9fa;
+        font-weight: bold;
+        color: var(--header-color);
+      }
+      tr:nth-child(even) {
+        background-color: #fdfdfd;
+      }
+      tr:hover {
+        background-color: #f1f8ff;
       }
       .sentiment-POSITIVE {
-        color: #27ae60;
+        color: var(--success-color);
         font-weight: bold;
       }
       .sentiment-NEGATIVE {
-        color: #c0392b;
+        color: var(--danger-color);
         font-weight: bold;
       }
       .sentiment-NEUTRAL {
@@ -215,22 +273,21 @@
         margin-bottom: 20px;
         font-size: 1.1em;
         color: #555;
-        padding: 10px;
+        padding: 15px;
         background-color: #f8f9fa;
         border-radius: 8px;
       }
       .table-summary span {
-        margin: 0 10px;
+        margin: 0 15px;
       }
-      .summary-button-container {
+      .top-buttons-container {
         display: flex;
         justify-content: center;
         gap: 20px;
         flex-wrap: wrap;
-        margin: 30px 0;
+        margin-bottom: 40px;
       }
-      .exec-summary-btn,
-      .root-cause-btn {
+      .action-btn {
         color: white;
         border: none;
         padding: 12px 25px;
@@ -238,42 +295,37 @@
         font-size: 1.1em;
         font-weight: bold;
         cursor: pointer;
-        transition: background-color 0.3s;
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+      .action-btn:hover {
+        transform: translateY(-2px);
       }
       .exec-summary-btn {
-        background-color: #1abc9c;
+        background: linear-gradient(45deg, #1abc9c, #16a085);
+        box-shadow: 0 4px 8px rgba(26, 188, 156, 0.3);
       }
-      .exec-summary-btn:hover {
-        background-color: #16a085;
+      .simulation-btn {
+        background: linear-gradient(45deg, #f39c12, #e67e22);
+        box-shadow: 0 4px 8px rgba(243, 156, 18, 0.3);
       }
       .root-cause-btn {
-        background-color: #34495e;
+        background: linear-gradient(45deg, #34495e, #2c3e50);
+        box-shadow: 0 4px 8px rgba(52, 73, 94, 0.3);
       }
-      .root-cause-btn:hover {
-        background-color: #2c3e50;
-      }
+
       @media (max-width: 768px) {
         .charts-container {
           flex-direction: column;
           align-items: center;
         }
-        .chart-card,
-        .keyword-card,
-        .trend-card,
-        .wordcloud-card {
+        .card {
           max-width: 90%;
         }
-        .search-form {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 10px;
-        }
         .search-form input {
-          width: 80%;
+          width: 70%;
         }
-        .search-form button {
-          margin-left: 0;
+        #mic-button {
+          right: 110px;
         }
       }
       #loader-overlay {
@@ -291,7 +343,7 @@
       }
       .loader {
         border: 8px solid #f3f3f3;
-        border-top: 8px solid #3498db;
+        border-top: 8px solid var(--primary-color);
         border-radius: 50%;
         width: 60px;
         height: 60px;
@@ -300,7 +352,7 @@
       }
       #loader-overlay p {
         font-size: 1.2em;
-        color: #2c3e50;
+        color: var(--secondary-color);
       }
       @keyframes spin {
         0% {
@@ -317,7 +369,7 @@
       .pagination-btn {
         background-color: white;
         border: 1px solid #ddd;
-        color: #3498db;
+        color: var(--primary-color);
         padding: 8px 16px;
         text-decoration: none;
         cursor: pointer;
@@ -326,11 +378,11 @@
         transition: background-color 0.3s;
       }
       .pagination-btn:hover {
-        background-color: #3498db;
+        background-color: var(--primary-color);
         color: white;
       }
       .pagination-btn.active {
-        background-color: #3498db;
+        background-color: var(--primary-color);
         color: white;
         font-weight: bold;
       }
@@ -343,12 +395,12 @@
         text-align: center;
         margin-top: 50px;
         padding-top: 20px;
-        border-top: 1px solid #ddd;
-        color: #7f8c8d;
+        border-top: 1px solid #e0e0e0;
+        color: #95a5a6;
         font-size: 0.9em;
       }
       .ai-assistant-btn {
-        background-color: #e67e22;
+        background: linear-gradient(45deg, #e67e22, #d35400);
         color: white;
         border: none;
         padding: 10px 20px;
@@ -357,68 +409,14 @@
         font-weight: bold;
         cursor: pointer;
         margin-top: 15px;
-        transition: background-color 0.3s;
+        transition: transform 0.2s;
       }
       .ai-assistant-btn:hover {
-        background-color: #d35400;
+        transform: translateY(-2px);
       }
       .swal2-html-container {
         text-align: left !important;
         white-space: pre-wrap;
-      }
-
-      .search-form {
-        position: relative;
-        display: inline-block;
-      }
-      #mic-button {
-        position: absolute;
-        right: 130px; /* ปรับตำแหน่งให้อยู่ในช่อง input */
-        top: 50%;
-        transform: translateY(-50%);
-        background: none;
-        border: none;
-        font-size: 1.5em;
-        cursor: pointer;
-        color: #7f8c8d;
-      }
-      #mic-button.recording {
-        color: #e74c3c; /* เปลี่ยนเป็นสีแดงเมื่อกำลังบันทึกเสียง */
-      }
-
-      /* ... โค้ด CSS เดิมทั้งหมด ... */
-      .search-form-container {
-        text-align: center;
-        margin-bottom: 40px;
-      }
-      .top-buttons-container {
-        display: flex;
-        justify-content: center;
-        gap: 20px;
-        flex-wrap: wrap;
-        margin-bottom: 40px;
-      }
-      .action-btn {
-        color: white;
-        border: none;
-        padding: 12px 25px;
-        border-radius: 25px;
-        font-size: 1.1em;
-        font-weight: bold;
-        cursor: pointer;
-        transition: background-color 0.3s;
-      }
-      .exec-summary-btn {
-        background-color: #1abc9c;
-      }
-      .exec-summary-btn:hover {
-        background-color: #16a085;
-      }
-      .simulation-btn {
-        background-color: #f39c12;
-      } /* สีส้ม */
-      .simulation-btn:hover {
-        background-color: #e67e22;
       }
     </style>
     <link
@@ -461,7 +459,7 @@
           🪄 สร้างบทสรุปสำหรับผู้บริหาร
         </button>
         {% if sentiment_summary.NEGATIVE > 0 %}
-        <button id="root-cause-button" class="root-cause-btn">
+        <button id="root-cause-button" class="action-btn root-cause-btn">
           🔬 วิเคราะห์สาเหตุเชิงลึก
         </button>
         {% endif %} {% endif %}
