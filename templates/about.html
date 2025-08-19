@@ -32,13 +32,14 @@
         text-align: center;
       }
       .header .logo {
-        width: 100px;
+        width: 180px;
         height: auto;
-        margin-bottom: 15px;
+        margin-bottom: 2px;
       }
+
       h1 {
         color: var(--header-color);
-        line-height: 1.4;
+        line-height: 1;
       }
       h1 small {
         font-size: 0.6em;
@@ -104,6 +105,17 @@
       .nav-link:hover {
         color: var(--secondary-color);
       }
+      .site-footer {
+        text-align: center;
+        margin-top: 50px;
+        padding-top: 20px;
+        border-top: 1px solid #ddd;
+        color: #7f8c8d;
+        font-size: 0.9em;
+      }
+      .site-footer p {
+        text-align: center; /* บังคับให้ p จัดกลาง */
+      }
     </style>
     <link
       href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap"
@@ -114,7 +126,7 @@
     <div class="main-container">
       <div class="header">
         <img
-          src="https://img2.pic.in.th/pic/d7148bd48bd930bf925897e1884e2b82.png"
+          src="https://img5.pic.in.th/file/secure-sv1/Gemini_Generated_Image_uinbgjuinbgjuinb-removebg-preview.png"
           alt="Project Logo"
           class="logo"
         />
@@ -206,5 +218,12 @@
 
       <a href="{{ url_for('index') }}" class="back-link">กลับสู่หน้าหลัก</a>
     </div>
+    <footer class="site-footer">
+      <p>
+        แผนกวิชาคอมพิวเตอร์ธุรกิจ วิทยาลัยเทคนิครัตนบุรี
+        สำนักงานอาชีวศึกษาสุรินทร์<br />
+        สำนักงานคณะกรรมการการอาชีวศึกษา กระทรวงศึกษาธิการ
+      </p>
+    </footer>
   </body>
 </html>
