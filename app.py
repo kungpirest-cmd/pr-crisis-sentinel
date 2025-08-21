@@ -11,7 +11,7 @@ from pythainlp.corpus import thai_stopwords
 import collections
 from analysis_engine import get_news_from_api, analyze_sentiment_with_gemini
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 import google.generativeai as genai
 import os
 import requests
