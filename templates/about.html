@@ -116,6 +116,13 @@
       .site-footer p {
         text-align: center; /* บังคับให้ p จัดกลาง */
       }
+      .tech-stack {
+        margin-top: 40px;
+      }
+      .tech-item {
+        margin-bottom: 15px;
+        font-size: 1.1em;
+      }
     </style>
     <link
       href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap"
@@ -207,15 +214,22 @@
         </li>
       </ul>
 
-      <div class="team-section">
-        <h2>คณะผู้จัดทำ</h2>
-        <p class="team-member">
-          นายตัวอย่าง ตั้งใจเรียน - ผู้จัดการโครงการ <br />
-          นายตัวอย่าง ตั้งใจเรียน - ผู้จัดการโครงการ <br />นายตัวอย่าง
-          ตั้งใจเรียน - ผู้จัดการโครงการ <br />นายปิยะพงษ์ พรหมบุตร -
-          ที่ปรึกษาโครงการ
-        </p>
+      <!-- ===== ส่วนที่แก้ไข: เปลี่ยนจากคณะผู้จัดทำเป็นเทคโนโลยีที่ใช้ ===== -->
+      <div class="tech-stack">
+        <h2>เทคโนโลยีหลักที่ใช้ (Core Technologies)</h2>
+        <ul class="features-list">
+          <li><strong>Backend:</strong> Python, Flask</li>
+          <li><strong>Frontend:</strong> HTML, CSS, JavaScript, Chart.js</li>
+          <li>
+            <strong>AI & Machine Learning:</strong> Google Gemini 1.5 Pro,
+            Transformers, PyThaiNLP
+          </li>
+          <li><strong>Database:</strong> SQLite</li>
+          <li><strong>APIs:</strong> NewsAPI, Telegram Bot API</li>
+          <li><strong>Hardware Integration:</strong> ESP8266/ESP32</li>
+        </ul>
       </div>
+      <!-- ========================================================== -->
 
       <a href="{{ url_for('index') }}" class="back-link">กลับสู่หน้าหลัก</a>
     </div>
