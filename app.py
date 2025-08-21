@@ -1,7 +1,7 @@
 # ==============================================================================
 # ส่วนที่ 1: Import ไลบรารีที่จำเป็นทั้งหมด
 # ==============================================================================
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
+from flask import Flask, render_template, request, jsonify
 import json
 import pandas as pd
 import time
@@ -11,44 +11,33 @@ from pythainlp.corpus import thai_stopwords
 import collections
 from analysis_engine import get_news_from_api, analyze_sentiment_with_gemini
 import sqlite3
-from datetime import datetime, timedelta 
+from datetime import datetime
 import google.generativeai as genai
 import os
 import requests
-from functools import wraps
+
 
 # ==============================================================================
 # ส่วนที่ 2: ตั้งค่าต่างๆ
 # ==============================================================================
 app = Flask(__name__)
-# ===== START: เพิ่มการตั้งค่าสำหรับระบบ Login =====
-app.secret_key = 'rbtech' # ตั้งรหัสลับ (เปลี่ยนเป็นอะไรก็ได้)
-PIN_CODE = "212224" # <<<< ตั้งรหัส PIN 6 หลักของคุณที่นี่
-# =============================================
-
-# ONLINE กรณีรันออนไลน์ผ่าน Render
 NEWS_API_KEY = os.environ.get('NEWS_API_KEY')
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
 TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
 TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID')
 
-# OFFLINE กรณีรันผ่านเครื่อง
-# NEWS_API_KEY = "91bba17953f340ffa7c7989b7c063ece"
-# GEMINI_API_KEY = "AIzaSyAQRVu2s7tZh694BueAvqsK459gNRr7am0"
-# TELEGRAM_BOT_TOKEN = "8463143627:AAEptZVclnBOc_5qtY5PvwGDT8b8zQH-T5s"
-# TELEGRAM_CHAT_ID = "-4974494043"
-
 
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel('gemini-1.5-pro-latest')
 
+
 # ===== START: เพิ่มหน่วยความจำสำหรับเก็บสถานะล่าสุด =====
 latest_analysis_status = {
     "keyword": None,
-    "status": "normal",
-    "timestamp": 0 # เพิ่มนาฬิกาจับเวลา
+    "status": "normal" # ค่าเริ่มต้นคือ "ปกติ"
 }
 # =======================================================
+
 
 # --- พจนานุกรมคำศัพท์สำหรับแผนสำรอง ---
 NEGATIVE_KEYWORDS = [
@@ -90,42 +79,10 @@ NEGATION_WORDS = [
     "ไร้วี่แวว", "นอกเหนือจาก", "ยกเว้น", "โดยไม่มี", "โดยปราศจาก"
 ]
 
+
 # ==============================================================================
 # ส่วนที่ 3: ฟังก์ชันเสริมต่างๆ
 # ==============================================================================
-# ===== START: สร้าง "ยาม" ตรวจสอบการ Login =====
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not session.get('logged_in'):
-            return redirect(url_for('login'))
-        return f(*args, **kwargs)
-    return decorated_function
-# =============================================
-
-# ===== START: เพิ่มฟังก์ชันตรวจสอบ Timeout =====
-@app.before_request
-def check_session_timeout():
-    # กำหนดเวลา Timeout ที่ 15 นาที
-    SESSION_TIMEOUT_MINUTES = 30
-    
-    # ตรวจสอบเฉพาะผู้ที่ login แล้วเท่านั้น
-    if 'logged_in' in session and 'last_activity' in session:
-        last_activity = session['last_activity']
-        now = datetime.now()
-        
-        # ถ้าไม่ได้ใช้งานนานเกินกว่าเวลาที่กำหนด
-        if now - last_activity > timedelta(minutes=SESSION_TIMEOUT_MINUTES):
-            session.pop('logged_in', None)
-            session.pop('last_activity', None)
-            flash('คุณไม่ได้ใช้งานระบบนานเกิน 30 นาที กรุณาเข้าสู่ระบบใหม่อีกครั้ง')
-            return redirect(url_for('login'))
-            
-    # อัปเดตเวลาใช้งานล่าสุดทุกครั้งที่มีการ request
-    if 'logged_in' in session:
-        session['last_activity'] = datetime.now()
-# ===== END: เพิ่มฟังก์ชันตรวจสอบ Timeout =====
-
 def apply_sentiment_rules(initial_label, text):
     final_label = initial_label
     text_lower = text.lower()
@@ -143,13 +100,10 @@ def apply_sentiment_rules(initial_label, text):
                 return "POSITIVE"
     return final_label
 
+
 def create_wordcloud(text):
     if not text.strip(): return None
-    # กรณีออนไลน์
     font_path = 'fonts/Sarabun-Regular.ttf'
-     # กรณีออฟไลน์
-    # font_path = 'C:/Windows/Fonts/tahoma.ttf' # กลับมาใช้ Path เดิมที่แน่นอนกว่า
-
     try:
         words = word_tokenize(text, engine='newmm')
         text_for_cloud = " ".join(words)
@@ -164,12 +118,14 @@ def create_wordcloud(text):
         print(f"Error: ไม่สามารถสร้าง Word Cloud ได้: {e}")
         return None
 
+
 def extract_keywords(text):
     words = word_tokenize(text, engine='newmm')
     stopwords_list = thai_stopwords()
     keywords = [word for word in words if word not in stopwords_list and not word.isnumeric() and len(word) > 1]
     counter = collections.Counter(keywords)
     return [item[0] for item in counter.most_common(5)]
+
 
 def save_to_history(keyword, percentages):
     conn = sqlite3.connect('history.db')
@@ -179,6 +135,7 @@ def save_to_history(keyword, percentages):
     conn.commit()
     conn.close()
 
+
 def get_historical_average(keyword):
     conn = sqlite3.connect('history.db')
     query = "SELECT AVG(negative_percent) FROM analysis_history WHERE keyword = ? AND analysis_date >= date('now', '-7 days')"
@@ -186,6 +143,7 @@ def get_historical_average(keyword):
     conn.close()
     historical_avg = df.iloc[0, 0]
     return historical_avg if pd.notna(historical_avg) else None
+
 
 def send_telegram_notification(message):
     if not all([TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID]) or "HERE" in TELEGRAM_BOT_TOKEN:
@@ -205,45 +163,33 @@ def send_telegram_notification(message):
         print(f"Error: เกิดข้อผิดพลาดในการเชื่อมต่อกับ Telegram: {e}")
         return False
 
+
 # ==============================================================================
 # ส่วนที่ 4: สร้างหน้าเว็บ (Routes)
 # ==============================================================================
 @app.route('/')
-@login_required
 def index():
     return render_template('index.html')
 
+
 @app.route('/about')
-@login_required
 def about():
     return render_template('about.html')
 
+
 @app.route('/analyze', methods=['POST'])
-@login_required
 def analyze():
     keyword = request.form.get('keyword', '').strip()
-
-    # ===== START: อัปเดต keyword ทันที =====
-    # เพื่อให้ ESP32 เห็นคำค้นหาล่าสุดเสมอ แม้ว่าจะไม่เจอข่าวก็ตาม
-    latest_analysis_status["keyword"] = keyword
-    # latest_analysis_status["timestamp"] = int(time.time()) # บันทึกเวลาปัจจุบัน
-    print(f"Received search for '{keyword}', updating global keyword.")
-    # ======================================
-    
     articles = get_news_from_api(keyword, NEWS_API_KEY)
-    
+   
     results_data, labels, values = [], [], []
     wordcloud_image, top_keywords = None, None
     trend_message, trend_status = None, None
     sentiment_summary = {'POSITIVE': 0, 'NEGATIVE': 0, 'NEUTRAL': 0}
     negative_headlines_for_js = []
 
-    if not articles:
-        # ถ้าไม่เจอข่าว ให้รีเซ็ต status เป็น normal
-        latest_analysis_status["status"] = "normal"
-        latest_analysis_status["timestamp"] = int(time.time()) # บันทึกเวลาปัจจุบัน
-        print("No articles found. Setting status to normal.")
-    else:
+
+    if articles:
         try:
             analysis_results = analyze_sentiment_with_gemini(articles, model)
             print("Analysis successful using Gemini AI.")
@@ -258,9 +204,10 @@ def analyze():
             initial_analysis = sentiment_analyzer(headlines)
             analysis_results = [{'title': article['title'], 'url': article['url'], 'sentiment': apply_sentiment_rules(initial_analysis[i]['label'].upper(), article['title'])} for i, article in enumerate(articles)]
 
+
         negative_headlines_text = ""
         label_map_thai = {"POSITIVE": "ข่าวเชิงบวก", "NEGATIVE": "ข่าวเชิงลบ", "NEUTRAL": "ข่าวเป็นกลาง"}
-        
+       
         for result in analysis_results:
             final_label = result['sentiment']
             sentiment_summary[final_label] += 1
@@ -271,9 +218,10 @@ def analyze():
             if final_label == 'NEGATIVE':
                 negative_headlines_text += result['title'] + " "
                 negative_headlines_for_js.append(result['title'])
-        
+       
         sort_order = {"NEGATIVE": 0, "NEUTRAL": 1, "POSITIVE": 2}
         results_data.sort(key=lambda x: sort_order.get(x['sentiment'], 3))
+
 
         total_articles = len(articles) if articles else 1
         percentages = {label: (count / total_articles) * 100 for label, count in sentiment_summary.items()}
@@ -286,54 +234,34 @@ def analyze():
             else: trend_message, trend_status = f"ใกล้เคียงกับค่าเฉลี่ย 7 วันล่าสุด ({historical_avg:.1f}%)", "normal"
         else:
             trend_message, trend_status = "ยังไม่มีข้อมูลย้อนหลังเพียงพอ", "normal"
-        
-        is_volume_crisis = sentiment_summary['NEGATIVE'] > sentiment_summary['POSITIVE']
-        if trend_status != 'alert' and is_volume_crisis:
-            print("Volume crisis detected, overriding status to alert.")
-            trend_status = 'alert'
-            trend_message = f"สัดส่วนข่าวเชิงลบ ({sentiment_summary['NEGATIVE']}) มากกว่าข่าวเชิงบวก ({sentiment_summary['POSITIVE']})"
+            # ===== START: อัปเดตสถานะล่าสุดในหน่วยความจำ =====
+            latest_analysis_status["keyword"] = keyword
+            latest_analysis_status["status"] = trend_status
+            print(f"Updated global status: {latest_analysis_status}")
+            # ===============================================
 
-        # ===== START: อัปเดต status หลังวิเคราะห์เสร็จ =====
-        latest_analysis_status["status"] = trend_status
-        latest_analysis_status["timestamp"] = int(time.time())
-        print(f"Analysis complete. Final status: {latest_analysis_status}")
-        # ===============================================
 
         if negative_headlines_text:
             wordcloud_image = create_wordcloud(negative_headlines_text)
             top_keywords = extract_keywords(negative_headlines_text)
-        
+       
         if trend_status == 'alert':
-            notification_message = f"Crisis Alert: {keyword}\nสถานการณ์: {trend_message}\nประเด็นร้อน: {', '.join(top_keywords)}"
+            notification_message = f"🚨 *Crisis Alert: {keyword}* 🚨\n*สถานการณ์:* {trend_message}\n*ประเด็นร้อน:* {', '.join(top_keywords)}"
             send_telegram_notification(notification_message)
-        
+       
         labels = [label_map_thai.get(label) for label in sentiment_summary.keys()]
         values = list(sentiment_summary.values())
 
-    return render_template('index.html', 
+
+    return render_template('index.html',
                            keyword=keyword, results=results_data,
                            labels=json.dumps(labels), values=json.dumps(values),
                            wordcloud_image=wordcloud_image, top_keywords=top_keywords,
                            trend_message=trend_message, trend_status=trend_status,
                            sentiment_summary=sentiment_summary,
                            negative_headlines_for_js=negative_headlines_for_js)
+                           
 
-# ===== START: เพิ่ม Route สำหรับ Login และ Logout =====
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        if request.form.get('pin') == PIN_CODE:
-            session['logged_in'] = True
-            return redirect(url_for('index'))
-        else:
-            flash('รหัส PIN ไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง')
-    return render_template('login.html')
-
-@app.route('/logout')
-def logout():
-    session.pop('logged_in', None)
-    return redirect(url_for('login'))
-# ===== END: เพิ่ม Route =====     
 
 @app.route('/get_pr_suggestion', methods=['POST'])
 def get_pr_suggestion():
@@ -342,17 +270,21 @@ def get_pr_suggestion():
     top_keywords = data.get('top_keywords')
     negative_headlines = data.get('negative_headlines')
 
+
     if not keyword or not top_keywords or not negative_headlines:
         return jsonify({'error': 'ยังไม่มีข้อมูลย้อนหลังเพียงพอ'}), 400
 
+
     prompt = f"""
     ในฐานะผู้เชี่ยวชาญด้านการประชาสัมพันธ์และการจัดการภาวะวิกฤต โปรดร่าง "ข้อความชี้แจงเบื้องต้น" สำหรับโพสต์ลงโซเชียลมีเดีย (เช่น Facebook, X) เพื่อสื่อสารกับสาธารณะเกี่ยวกับสถานการณ์เชิงลบที่เกิดขึ้น
+
 
     **ข้อมูลประกอบ:**
     - **แบรนด์ที่เกี่ยวข้อง:** {keyword}
     - **ประเด็นร้อนหลักที่ตรวจพบ:** {', '.join(top_keywords)}
     - **ตัวอย่างหัวข้อข่าวเชิงลบ:**
     {"\n".join([f"- {h}" for h in negative_headlines])}
+
 
     **ข้อกำหนดในการร่างข้อความ:**
     1.  ยอมรับปัญหา, 2. แสดงความห่วงใย, 3. แจ้งการดำเนินการ, 4. ระบุช่องทางติดต่อ, 5. ใช้ภาษาที่เป็นกลาง
@@ -372,15 +304,20 @@ def get_pr_suggestion():
         print(f"Warning: Gemini suggestion failed ({e}), providing a fallback response.")
         fallback_suggestion = f"""เรียน สื่อมวลชนและผู้ติดตามทุกท่าน,
 
+
 จากกรณีที่เกิดขึ้นเกี่ยวกับ [{keyword}] ซึ่งเกี่ยวข้องกับประเด็น [{', '.join(top_keywords)}] ทางเราได้รับทราบถึงปัญหาดังกล่าวแล้ว และไม่ได้นิ่งนอนใจต่อสถานการณ์ที่เกิดขึ้น
+
 
 ขณะนี้ทีมงานที่เกี่ยวข้องกำลังเร่งตรวจสอบข้อเท็จจริงอย่างเร่งด่วนที่สุดเพื่อทำความเข้าใจถึงสาเหตุของปัญหาและผลกระทบทั้งหมด
 
+
 เราขออภัยเป็นอย่างสูงสำหรับความไม่สะดวกและความกังวลใจที่เกิดขึ้น และจะรีบชี้แจงรายละเอียดทั้งหมดให้ทราบอีกครั้งโดยเร็วที่สุด
+
 
 ขอขอบพระคุณสำหรับความเข้าใจของท่าน
 ทีมงานประชาสัมพันธ์ [{keyword}]"""
         return jsonify({'suggestion': fallback_suggestion})
+
 
 @app.route('/get_executive_summary', methods=['POST'])
 def get_executive_summary():
@@ -390,16 +327,20 @@ def get_executive_summary():
     top_keywords = data.get('top_keywords')
     trend_message = data.get('trend_message')
 
+
     if not all([keyword, sentiment_summary, top_keywords, trend_message]):
         return jsonify({'error': 'ยังไม่มีข้อมูลย้อนหลังเพียงพอ'}), 400
 
+
     prompt = f"""
     ในฐานะนักวิเคราะห์กลยุทธ์อาวุโส โปรดสังเคราะห์ข้อมูลภาพลักษณ์ของแบรนด์ '{keyword}' ต่อไปนี้ และเขียน "บทสรุปสำหรับผู้บริหาร" (Executive Summary) ความยาว 1 ย่อหน้า (ไม่เกิน 4-5 บรรทัด) เพื่อให้ผู้บริหารเข้าใจสถานการณ์ได้อย่างรวดเร็วที่สุด
+
 
     **ข้อมูลดิบ:**
     - **สัดส่วนความรู้สึก:** ข่าวเชิงบวก {sentiment_summary.get('POSITIVE', 0)} รายการ, ข่าวเชิงลบ {sentiment_summary.get('NEGATIVE', 0)} รายการ, ข่าวเป็นกลาง {sentiment_summary.get('NEUTRAL', 0)} รายการ
     - **ประเด็นร้อนเชิงลบหลัก:** {', '.join(top_keywords) if top_keywords else 'ไม่มี'}
     - **แนวโน้มล่าสุด:** {trend_message}
+
 
     **ข้อกำหนด:**
     - เริ่มต้นด้วยการสรุปภาพรวม
@@ -425,23 +366,26 @@ def get_executive_summary():
         fallback_summary = "ไม่สามารถสร้างบทสรุปอัตโนมัติได้ในขณะนี้ เนื่องจากเกิดข้อผิดพลาดในการเชื่อมต่อกับ AI กรุณาลองใหม่อีกครั้ง"
         return jsonify({'summary': fallback_summary})
 
+
 @app.route('/send_summary_telegram', methods=['POST'])
 def send_summary_telegram():
     data = request.json
     keyword = data.get('keyword')
     summary = data.get('summary')
 
+
     if not keyword or not summary:
         return jsonify({'success': False, 'message': 'ยังไม่มีข้อมูลย้อนหลังเพียงพอ'}), 400
-    
+   
     telegram_message = f"📄 *บทสรุปสำหรับผู้บริหาร: {keyword}*\n\n{summary}"
-    
+   
     success = send_telegram_notification(telegram_message)
-    
+   
     if success:
         return jsonify({'success': True, 'message': 'ส่งบทสรุปเข้า Telegram สำเร็จ'})
     else:
         return jsonify({'success': False, 'message': 'ไม่สามารถส่งบทสรุปเข้า Telegram ได้'}), 500
+
 
 # ===== START: เพิ่มฟังก์ชันที่หายไปกลับเข้ามา =====
 @app.route('/get_root_cause', methods=['POST'])
@@ -449,13 +393,17 @@ def get_root_cause():
     data = request.json
     negative_headlines = data.get('negative_headlines')
 
+
     if not negative_headlines:
         return jsonify({'error': 'ยังไม่มีข้อมูลย้อนหลังเพียงพอ'}), 400
+
 
     prompt = f"""
     ในฐานะนักวิเคราะห์ปัญหามืออาชีพ โปรดอ่านหัวข้อข่าวเชิงลบทั้งหมดนี้ แล้ววินิจฉัยว่า "สาเหตุรากเหง้า" (Root Cause) ที่แท้จริงของวิกฤตครั้งนี้คืออะไร โดยให้จัดหมวดหมู่เป็นหนึ่งในสี่ประเภทนี้เท่านั้น: "คุณภาพสินค้า/บริการ", "การสื่อสารล้มเหลว", "ปัญหาด้านราคา", หรือ "ภาพลักษณ์องค์กร"
 
+
     โปรดตอบกลับเป็น JSON Object รูปแบบนี้เท่านั้น: {{"category": "หมวดหมู่", "reason": "เหตุผลประกอบ 1 ประโยค"}}
+
 
     หัวข้อข่าวเชิงลบ:
     {"\n".join([f"- {h}" for h in negative_headlines])}
@@ -468,34 +416,28 @@ def get_root_cause():
             'HARM_CATEGORY_DANGEROUS_CONTENT': 'BLOCK_NONE',
         }
         response = model.generate_content(prompt, safety_settings=safety_settings)
-        
+       
         cleaned_response = response.text.strip().replace('```json', '').replace('```', '')
         analysis_result = json.loads(cleaned_response)
-        
+       
         return jsonify(analysis_result)
     except Exception as e:
         print(f"Warning: Gemini root cause analysis failed ({e})")
         return jsonify({'error': 'Failed to analyze root cause'}), 500
 # ===== END: เพิ่มฟังก์ชันที่หายไปกลับเข้ามา =====
 
-# ===== START: Route ใหม่สำหรับให้ ESP8266 เรียกใช้ =====
+
+# ===== START: Route ใหม่สำหรับให้ ESP32 เรียกใช้ =====
 @app.route('/api/crisis_status')
 def crisis_status():
     """
-    API Endpoint ที่จะคืนค่าสถานะล่าสุด และรีเซ็ตสถานะ alert ที่หมดอายุแล้ว
+    API Endpoint ที่จะคืนค่าสถานะล่าสุดเป็น JSON
+    เพื่อให้ ESP32 หรืออุปกรณ์อื่นๆ เข้ามาตรวจสอบได้
     """
-    ALERT_DURATION_SECONDS = 90 # กำหนดให้ Alert อยู่ได้นาน 1.30 นาที
-
-    # ตรวจสอบว่าสถานะปัจจุบันคือ 'alert' และหมดเวลาแล้วหรือยัง
-    if latest_analysis_status["status"] == "alert":
-        current_time = int(time.time())
-        alert_time = latest_analysis_status.get("timestamp", 0)
-
-        if (current_time - alert_time) > ALERT_DURATION_SECONDS:
-            print("Alert has expired. Resetting status to normal.")
-            latest_analysis_status["status"] = "normal" # รีเซ็ตสถานะกลับเป็นปกติ
-
     return jsonify(latest_analysis_status)
+# ===== END: Route ใหม่ =====
+
+
 
 
 # ===== START: Route ใหม่สำหรับห้องจำลองสถานการณ์ =====
@@ -504,12 +446,15 @@ def simulate_crisis():
     data = request.json
     headline = data.get('headline')
 
+
     if not headline:
         return jsonify({'error': 'Missing headline'}), 400
+
 
     prompt = f"""
     ในฐานะ AI จำลองสถานการณ์วิกฤต (Crisis Simulation AI) จากหัวข้อข่าวเชิงลบสมมติต่อไปนี้:
     "{headline}"
+
 
     โปรดคาดการณ์และวิเคราะห์ผลกระทบที่จะเกิดขึ้นใน 3 มิติหลัก โดยให้ตอบกลับเป็น JSON Object รูปแบบนี้เท่านั้น:
     {{"key_concerns": ["ประเด็นกังวลหลัก 1", "ประเด็นกังวลหลัก 2"], "viral_score": คะแนน (1-10), "first_action": "สิ่งแรกที่ทีม PR ควรทำภายใน 1 ชั่วโมง"}}
@@ -523,9 +468,11 @@ def simulate_crisis():
         }
         response = model.generate_content(prompt, safety_settings=safety_settings)
 
+
         # ทำความสะอาดและแปลงผลลัพธ์จาก AI ให้เป็น JSON
         cleaned_response = response.text.strip().replace('```json', '').replace('```', '')
         simulation_result = json.loads(cleaned_response)
+
 
         return jsonify(simulation_result)
     except Exception as e:
@@ -533,13 +480,13 @@ def simulate_crisis():
         return jsonify({'error': 'Failed to get simulation from AI'}), 500
 # ===== END: Route ใหม่ =====
 
+
 # ==============================================================================
 # ส่วนที่ 5: สั่งให้แอปพลิเคชันทำงาน
 # ==============================================================================
 if __name__ == '__main__':
-    
-    # กรณีออนไลน์
     app.run(debug=True, host='0.0.0.0')
-
-    # กรณีออฟไลน์
     # app.run(debug=True)
+
+
+

@@ -4,7 +4,6 @@ import google.generativeai as genai
 import re
 import time
 
-
 def get_news_from_api(keyword, api_key):
     """
     ฟังก์ชันนี้จะดึงข้อมูลข่าวโดยตรงผ่าน NewsAPI
