@@ -1,7 +1,7 @@
 # ==============================================================================
 # ส่วนที่ 1: Import ไลบรารีที่จำเป็นทั้งหมด
 # ==============================================================================
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash, before_request
 import json
 import pandas as pd
 import time
@@ -15,11 +15,16 @@ from datetime import datetime
 import google.generativeai as genai
 import os
 import requests
+from functools import wraps
 
 # ==============================================================================
 # ส่วนที่ 2: ตั้งค่าต่างๆ
 # ==============================================================================
 app = Flask(__name__)
+# ===== START: เพิ่มการตั้งค่าสำหรับระบบ Login =====
+app.secret_key = 'rbtech' # ตั้งรหัสลับ (เปลี่ยนเป็นอะไรก็ได้)
+PIN_CODE = "212224" # <<<< ตั้งรหัส PIN 6 หลักของคุณที่นี่
+# =============================================
 
 # ONLINE กรณีรันออนไลน์ผ่าน Render
 NEWS_API_KEY = os.environ.get('NEWS_API_KEY')
@@ -88,6 +93,39 @@ NEGATION_WORDS = [
 # ==============================================================================
 # ส่วนที่ 3: ฟังก์ชันเสริมต่างๆ
 # ==============================================================================
+# ===== START: สร้าง "ยาม" ตรวจสอบการ Login =====
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('logged_in'):
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+# =============================================
+
+# ===== START: เพิ่มฟังก์ชันตรวจสอบ Timeout =====
+@app.before_request
+def check_session_timeout():
+    # กำหนดเวลา Timeout ที่ 15 นาที
+    SESSION_TIMEOUT_MINUTES = 30
+    
+    # ตรวจสอบเฉพาะผู้ที่ login แล้วเท่านั้น
+    if 'logged_in' in session and 'last_activity' in session:
+        last_activity = session['last_activity']
+        now = datetime.now()
+        
+        # ถ้าไม่ได้ใช้งานนานเกินกว่าเวลาที่กำหนด
+        if now - last_activity > timedelta(minutes=SESSION_TIMEOUT_MINUTES):
+            session.pop('logged_in', None)
+            session.pop('last_activity', None)
+            flash('คุณไม่ได้ใช้งานระบบนานเกิน 30 นาที กรุณาเข้าสู่ระบบใหม่อีกครั้ง')
+            return redirect(url_for('login'))
+            
+    # อัปเดตเวลาใช้งานล่าสุดทุกครั้งที่มีการ request
+    if 'logged_in' in session:
+        session['last_activity'] = datetime.now()
+# ===== END: เพิ่มฟังก์ชันตรวจสอบ Timeout =====
+
 def apply_sentiment_rules(initial_label, text):
     final_label = initial_label
     text_lower = text.lower()
@@ -171,14 +209,17 @@ def send_telegram_notification(message):
 # ส่วนที่ 4: สร้างหน้าเว็บ (Routes)
 # ==============================================================================
 @app.route('/')
+@login_required
 def index():
     return render_template('index.html')
 
 @app.route('/about')
+@login_required
 def about():
     return render_template('about.html')
 
 @app.route('/analyze', methods=['POST'])
+@login_required
 def analyze():
     keyword = request.form.get('keyword', '').strip()
 
@@ -276,7 +317,23 @@ def analyze():
                            trend_message=trend_message, trend_status=trend_status,
                            sentiment_summary=sentiment_summary,
                            negative_headlines_for_js=negative_headlines_for_js)
-                        
+
+# ===== START: เพิ่ม Route สำหรับ Login และ Logout =====
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        if request.form.get('pin') == PIN_CODE:
+            session['logged_in'] = True
+            return redirect(url_for('index'))
+        else:
+            flash('รหัส PIN ไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง')
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.pop('logged_in', None)
+    return redirect(url_for('login'))
+# ===== END: เพิ่ม Route =====     
 
 @app.route('/get_pr_suggestion', methods=['POST'])
 def get_pr_suggestion():

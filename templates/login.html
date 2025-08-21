@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login - ระบบ "เจาะข่าว" อัจฉริยะ</title>
+    <!-- โหลดไลบรารี JavaScript ที่จำเป็น -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+      body {
+        font-family: "Sarabun", sans-serif;
+        background: linear-gradient(135deg, #eaf2f8, #e8f6f3);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+      }
+      .login-container {
+        background-color: white;
+        padding: 40px;
+        border-radius: 16px;
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        width: 100%;
+        max-width: 400px;
+      }
+      .logo {
+        width: 80px;
+        height: auto;
+        margin-bottom: 15px;
+      }
+      h2 {
+        color: #2c3e50;
+        margin-bottom: 20px;
+      }
+      .pin-input {
+        font-size: 2em;
+        padding: 10px;
+        width: 200px;
+        text-align: center;
+        letter-spacing: 0.5em;
+        border: 2px solid #dfe6e9;
+        border-radius: 8px;
+        margin-bottom: 20px;
+      }
+      .login-btn {
+        font-size: 1.1em;
+        padding: 12px 25px;
+        background-color: #3498db;
+        color: white;
+        border: none;
+        border-radius: 25px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+      }
+      .error-message {
+        color: #e74c3c;
+        margin-top: 15px;
+        font-weight: bold;
+      }
+      .site-footer {
+        text-align: center;
+        margin-top: 50px;
+        padding-top: 20px;
+        border-top: 1px solid #e0e0e0;
+        color: #95a5a6;
+        font-size: 0.9em;
+      }
+    </style>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="login-container">
+      <img
+        src="https://img5.pic.in.th/file/secure-sv1/Gemini_Generated_Image_uinbgjuinbgjuinb-removebg-preview.png"
+        alt="Project Logo"
+        class="logo"
+      />
+      <h1>
+        🛡️ ระบบ "เจาะข่าว" อัจฉริยะ 🛡️<br /><small>(PR-Crisis Sentinel)</small>
+      </h1>
+      <h2>กรุณาป้อนรหัส PIN 6 หลัก</h2>
+      <form method="post">
+        <input
+          type="password"
+          name="pin"
+          class="pin-input"
+          maxlength="6"
+          pattern="\d{6}"
+          required
+          autofocus
+        />
+        <br />
+        <button type="submit" class="login-btn">เข้าสู่ระบบ</button>
+      </form>
+      {% with messages = get_flashed_messages() %} {% if messages %}
+      <p class="error-message">{{ messages[0] }}</p>
+      {% endif %} {% endwith %}
+    </div>
+    <footer class="site-footer">
+      <p>
+        แผนกวิชาคอมพิวเตอร์ธุรกิจ วิทยาลัยเทคนิครัตนบุรี
+        สำนักงานอาชีวศึกษาสุรินทร์<br />
+        สำนักงานคณะกรรมการการอาชีวศึกษา กระทรวงศึกษาธิการ
+      </p>
+    </footer>
+  </body>
+</html>
