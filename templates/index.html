@@ -35,7 +35,7 @@
       h1 {
         text-align: center;
         color: var(--header-color);
-        line-height: 1.4;
+        line-height: 1;
       }
       h1 small {
         font-size: 0.6em;
@@ -54,10 +54,11 @@
         margin-bottom: 30px;
       }
       .header .logo {
-        width: 100px;
+        width: 180px;
         height: auto;
-        margin-bottom: 15px;
+        margin-bottom: 2px;
       }
+
       .nav-link {
         color: var(--primary-color);
         text-decoration: none;
@@ -433,7 +434,7 @@
     <div class="main-container">
       <div class="header">
         <img
-          src="https://img2.pic.in.th/pic/d7148bd48bd930bf925897e1884e2b82.png"
+          src="https://img5.pic.in.th/file/secure-sv1/Gemini_Generated_Image_uinbgjuinbgjuinb-removebg-preview.png"
           alt="Project Logo"
           class="logo"
         />
@@ -445,6 +446,7 @@
         <nav>
           <a href="{{ url_for('index') }}" class="nav-link">หน้าหลัก</a>
           <a href="{{ url_for('about') }}" class="nav-link">เกี่ยวกับโครงการ</a>
+          <a href="{{ url_for('logout') }}" class="nav-link">ออกจากระบบ</a>
         </nav>
       </div>
 
@@ -599,7 +601,7 @@
 
     <footer class="site-footer">
       <p>
-        © 2025 แผนกวิชาคอมพิวเตอร์ธุรกิจ วิทยาลัยเทคนิครัตนบุรี
+        แผนกวิชาคอมพิวเตอร์ธุรกิจ วิทยาลัยเทคนิครัตนบุรี
         สำนักงานอาชีวศึกษาสุรินทร์<br />
         สำนักงานคณะกรรมการการอาชีวศึกษา กระทรวงศึกษาธิการ
       </p>
@@ -609,11 +611,9 @@
                 const searchForm = document.querySelector('.search-form');
                 const loaderOverlay = document.getElementById('loader-overlay');
 
-
           // ===== START: โค้ดสำหรับ Voice Input =====
               const micButton = document.getElementById('mic-button');
               const keywordInput = document.getElementById('keyword-input');
-
 
               // ตรวจสอบว่าเบราว์เซอร์รองรับ Web Speech API หรือไม่
               if ('webkitSpeechRecognition' in window) {
@@ -622,7 +622,6 @@
                   recognition.lang = 'th-TH';     // ตั้งค่าเป็นภาษาไทย
                   recognition.interimResults = false;
                   recognition.maxAlternatives = 1;
-
 
                   micButton.addEventListener('click', () => {
                       recognition.start();
@@ -646,15 +645,11 @@
 
 
 
-
-
-
                   // เมื่อ AI แปลงเสียงเป็นข้อความสำเร็จ
                   recognition.onresult = function(event) {
                       const transcript = event.results[0][0].transcript;
                       keywordInput.value = transcript;
                   };
-
 
                   // เมื่อเกิดข้อผิดพลาด
                   recognition.onerror = function(event) {
@@ -662,13 +657,11 @@
                       keywordInput.placeholder = "เกิดข้อผิดพลาด ลองอีกครั้ง";
                   };
 
-
                   // เมื่อการฟังเสียงสิ้นสุดลง
                   recognition.onend = function() {
                       micButton.classList.remove('recording');
                       keywordInput.placeholder = "พิมพ์ข้อความหรือพูดเสียง......";
                   };
-
 
               } else {
                   // ถ้าเบราว์เซอร์ไม่รองรับ ให้ซ่อนปุ่มไมโครโฟนไปเลย
@@ -677,14 +670,12 @@
               }
               // ===== END: โค้ดสำหรับ Voice Input =====
 
-
                 searchForm.addEventListener('submit', function() {
                     const keywordInput = document.querySelector('input[name="keyword"]');
                     if (keywordInput.value.trim() !== '') {
                         loaderOverlay.style.display = 'flex';
                     }
                 });
-
 
                 {% if keyword is defined %}
                     {% if not results %}
@@ -715,11 +706,9 @@
                             });
                         }
 
-
                         const tableRows = document.querySelectorAll('.table-container tbody tr');
                         const rowsPerPage = 10;
                         let currentPage = 1;
-
 
                         function setupPagination() {
                             const pageCount = Math.ceil(tableRows.length / rowsPerPage);
@@ -745,7 +734,6 @@
                             paginationWrapper.appendChild(nextButton);
                         }
 
-
                         function displayPage(page) {
                             tableRows.forEach(row => row.style.display = 'none');
                             const startIndex = (page - 1) * rowsPerPage;
@@ -753,7 +741,6 @@
                             for (let i = startIndex; i < endIndex && i < tableRows.length; i++) { tableRows[i].style.display = ''; }
                             updateActiveButton();
                         }
-
 
                         function updateActiveButton() {
                             const buttons = document.querySelectorAll('.pagination-btn');
@@ -766,14 +753,12 @@
                             buttons[buttons.length - 1].classList.toggle('disabled', currentPage === pageCount);
                         }
 
-
                         if (tableRows.length > rowsPerPage) {
                             setupPagination();
                             displayPage(currentPage);
                         } else {
                             tableRows.forEach(row => row.style.display = '');
                         }
-
 
                         const aiButton = document.getElementById('ai-assistant-button');
                         if (aiButton) {
@@ -785,11 +770,9 @@
                                     didOpen: () => { Swal.showLoading(); }
                                 });
 
-
                                 const keyword = '{{ keyword }}';
                                 const top_keywords = {{ top_keywords|tojson|safe }};
                                 const negative_headlines = {{ negative_headlines_for_js|tojson|safe }};
-
 
                                 fetch('/get_pr_suggestion', {
                                     method: 'POST',
@@ -840,7 +823,6 @@
                             });
                         }
 
-
                         const summaryButton = document.getElementById('exec-summary-button');
                         if (summaryButton) {
                             summaryButton.addEventListener('click', function() {
@@ -889,7 +871,6 @@
                             });
                         }
 
-
                         function sendSummaryToTelegram(keyword, summary) {
                             Swal.fire({
                                 title: 'กำลังส่ง...',
@@ -910,7 +891,6 @@
                                 }
                             });
                         }
-
 
                         const rootCauseButton = document.getElementById('root-cause-button');
                         if (rootCauseButton) {
@@ -953,7 +933,6 @@
                     {% endif %}
                 {% endif %}
 
-
             // ===== START: โค้ดสำหรับห้องจำลองสถานการณ์ =====
         const simulationButton = document.getElementById('simulation-button');
         if (simulationButton) {
@@ -968,7 +947,6 @@
                     cancelButtonText: 'ยกเลิก'
                 });
 
-
                 if (headline) {
                     Swal.fire({
                         title: 'AI กำลังคาดการณ์...',
@@ -976,7 +954,6 @@
                         allowOutsideClick: false,
                         didOpen: () => { Swal.showLoading(); }
                     });
-
 
                     fetch('/simulate_crisis', {
                         method: 'POST',

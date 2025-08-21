@@ -1,7 +1,7 @@
 # ==============================================================================
 # ส่วนที่ 1: Import ไลบรารีที่จำเป็นทั้งหมด
 # ==============================================================================
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
 import json
 import pandas as pd
 import time
@@ -15,11 +15,16 @@ from datetime import datetime
 import google.generativeai as genai
 import os
 import requests
+from functools import wraps
 
 # ==============================================================================
 # ส่วนที่ 2: ตั้งค่าต่างๆ
 # ==============================================================================
 app = Flask(__name__)
+# ===== START: เพิ่มการตั้งค่าสำหรับระบบ Login =====
+app.secret_key = 'your_super_secret_key_for_session' # ตั้งรหัสลับ (เปลี่ยนเป็นอะไรก็ได้)
+PIN_CODE = "212224" # <<<< ตั้งรหัส PIN 6 หลักของคุณที่นี่
+# =============================================
 NEWS_API_KEY = os.environ.get('NEWS_API_KEY')
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
 TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
@@ -78,6 +83,16 @@ NEGATION_WORDS = [
 # ==============================================================================
 # ส่วนที่ 3: ฟังก์ชันเสริมต่างๆ
 # ==============================================================================
+# ===== START: สร้าง "ยาม" ตรวจสอบการ Login =====
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('logged_in'):
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+# =============================================
+
 def apply_sentiment_rules(initial_label, text):
     final_label = initial_label
     text_lower = text.lower()
@@ -112,14 +127,12 @@ def create_wordcloud(text):
         print(f"Error: ไม่สามารถสร้าง Word Cloud ได้: {e}")
         return None
 
-
 def extract_keywords(text):
     words = word_tokenize(text, engine='newmm')
     stopwords_list = thai_stopwords()
     keywords = [word for word in words if word not in stopwords_list and not word.isnumeric() and len(word) > 1]
     counter = collections.Counter(keywords)
     return [item[0] for item in counter.most_common(5)]
-
 
 def save_to_history(keyword, percentages):
     conn = sqlite3.connect('history.db')
@@ -128,7 +141,6 @@ def save_to_history(keyword, percentages):
     cursor.execute("INSERT INTO analysis_history (keyword, analysis_date, negative_percent, positive_percent, neutral_percent) VALUES (?, ?, ?, ?, ?)", (keyword, today, percentages.get('NEGATIVE', 0), percentages.get('POSITIVE', 0), percentages.get('NEUTRAL', 0)))
     conn.commit()
     conn.close()
-
 
 def get_historical_average(keyword):
     conn = sqlite3.connect('history.db')
@@ -160,16 +172,24 @@ def send_telegram_notification(message):
 # ส่วนที่ 4: สร้างหน้าเว็บ (Routes)
 # ==============================================================================
 @app.route('/')
+@login_required
 def index():
     return render_template('index.html')
 
 @app.route('/about')
+@login_required
 def about():
     return render_template('about.html')
 
 @app.route('/analyze', methods=['POST'])
+@login_required
 def analyze():
     keyword = request.form.get('keyword', '').strip()
+    # ===== START: อัปเดต keyword ทันที =====
+    # เพื่อให้ ESP32 เห็นคำค้นหาล่าสุดเสมอ แม้ว่าจะไม่เจอข่าวก็ตาม
+    latest_analysis_status["keyword"] = keyword
+    print(f"Received search for '{keyword}', updating global keyword.")
+    # ======================================
     articles = get_news_from_api(keyword, NEWS_API_KEY)
     
     results_data, labels, values = [], [], []
@@ -178,7 +198,11 @@ def analyze():
     sentiment_summary = {'POSITIVE': 0, 'NEGATIVE': 0, 'NEUTRAL': 0}
     negative_headlines_for_js = []
 
-    if articles:
+    if not articles:
+        # ถ้าไม่เจอข่าว ให้รีเซ็ต status เป็น normal
+        latest_analysis_status["status"] = "normal"
+        print("No articles found. Setting status to normal.")
+    else:
         try:
             analysis_results = analyze_sentiment_with_gemini(articles, model)
             print("Analysis successful using Gemini AI.")
@@ -219,16 +243,21 @@ def analyze():
             if current_negative_percent > historical_avg * 1.2: trend_message, trend_status = f"สูงกว่าค่าเฉลี่ย 7 วันล่าสุด ({historical_avg:.1f}%)", "alert"
             elif current_negative_percent < historical_avg * 0.8: trend_message, trend_status = f"ต่ำกว่าค่าเฉลี่ย 7 วันล่าสุด ({historical_avg:.1f}%)", "good"
             else: trend_message, trend_status = f"ใกล้เคียงกับค่าเฉลี่ย 7 วันล่าสุด ({historical_avg:.1f}%)", "normal"
-        else:
-            trend_message, trend_status = "ยังไม่มีข้อมูลย้อนหลังเพียงพอ", "normal"
+        
+        is_volume_crisis = sentiment_summary['NEGATIVE'] > sentiment_summary['POSITIVE']
+        if trend_status != 'alert' and is_volume_crisis:
+            print("Volume crisis detected, overriding status to alert.")
+            trend_status = 'alert'
+            trend_message = f"สัดส่วนข่าวเชิงลบ ({sentiment_summary['NEGATIVE']}) มากกว่าข่าวเชิงบวก ({sentiment_summary['POSITIVE']})"
+
+        # ===== START: อัปเดต status หลังวิเคราะห์เสร็จ =====
+        latest_analysis_status["status"] = trend_status
+        print(f"Analysis complete. Final status: {latest_analysis_status}")
+        # ===============================================
 
         if negative_headlines_text:
             wordcloud_image = create_wordcloud(negative_headlines_text)
             top_keywords = extract_keywords(negative_headlines_text)
-        
-        if trend_status == 'alert':
-            notification_message = f"🚨 *Crisis Alert: {keyword}* 🚨\n*สถานการณ์:* {trend_message}\n*ประเด็นร้อน:* {', '.join(top_keywords)}"
-            send_telegram_notification(notification_message)
         
         labels = [label_map_thai.get(label) for label in sentiment_summary.keys()]
         values = list(sentiment_summary.values())
@@ -239,7 +268,24 @@ def analyze():
                            wordcloud_image=wordcloud_image, top_keywords=top_keywords,
                            trend_message=trend_message, trend_status=trend_status,
                            sentiment_summary=sentiment_summary,
-                           negative_headlines_for_js=json.dumps(negative_headlines_for_js))                           
+                           negative_headlines_for_js=json.dumps(negative_headlines_for_js))                       
+
+# ===== START: เพิ่ม Route สำหรับ Login และ Logout =====
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        if request.form.get('pin') == PIN_CODE:
+            session['logged_in'] = True
+            return redirect(url_for('index'))
+        else:
+            flash('รหัส PIN ไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง')
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.pop('logged_in', None)
+    return redirect(url_for('login'))
+# ===== END: เพิ่ม Route =====
 
 @app.route('/get_pr_suggestion', methods=['POST'])
 def get_pr_suggestion():
