@@ -1,7 +1,7 @@
 # ==============================================================================
 # ส่วนที่ 1: Import ไลบรารีที่จำเป็นทั้งหมด
 # ==============================================================================
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash, before_request
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
 import json
 import pandas as pd
 import time
